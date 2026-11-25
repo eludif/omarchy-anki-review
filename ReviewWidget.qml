@@ -85,7 +85,7 @@ Panel {
     }
 
     onOpenedChanged: {
-        if (opened && !decks.length && action === "")
+        if (opened && card === null && action === "" && message !== "error.grade")
             run("decks")
     }
 

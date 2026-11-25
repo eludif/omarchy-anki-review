@@ -10,7 +10,8 @@ and records your review.
 - Python 3
 - Anki Desktop running with [AnkiConnect](https://ankiweb.net/shared/info/2055492159)
   installed. In Anki, use **Tools → Add-ons → Get Add-ons**, enter
-  `2055492159`, and restart Anki. Keep the add-on on its default local
+  `2055492159`, and restart Anki once to load the add-on. The widget can
+  then connect to your existing Anki session. Keep the add-on on its default local
   address, `127.0.0.1:8765`. This plugin uses the default configuration
   without an API key.
 

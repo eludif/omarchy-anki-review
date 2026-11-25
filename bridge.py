@@ -2,9 +2,11 @@
 
 import http.client
 import json
+import os
 import re
 import sys
 from html.parser import HTMLParser
+from pathlib import Path
 
 MAX_RESPONSE = 2 * 1024 * 1024
 
@@ -126,6 +128,14 @@ def review(operation, args):
     raise ReviewError("response")
 
 
+def connection_error():
+    data_home = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+    addon_dir = data_home / "Anki2" / "addons21"
+    if addon_dir.is_dir() and not (addon_dir / "2055492159").is_dir():
+        return "addon_missing"
+    return "connection"
+
+
 def main():
     operation, *args = sys.argv[1:]
     try:
@@ -133,7 +143,7 @@ def main():
     except ReviewError as error:
         result = {"error": str(error)}
     except (OSError, http.client.HTTPException):
-        result = {"error": "connection"}
+        result = {"error": connection_error()}
     except (KeyError, TypeError, ValueError, IndexError):
         result = {"error": "response"}
     print(json.dumps(result))
