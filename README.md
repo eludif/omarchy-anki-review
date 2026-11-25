@@ -4,6 +4,10 @@ Review any Anki deck from the Omarchy bar. Pick a deck, reveal each answer,
 and send a rating to Anki Desktop. Anki's reviewer selects the next card
 and records your review.
 
+![Anki Review popup showing a revealed answer and four rating buttons](preview.png)
+
+After revealing the answer, choose **Again**, **Hard**, **Good**, or **Easy**.
+
 ## Requirements
 
 - Omarchy 4.5 with its Quickshell bar
