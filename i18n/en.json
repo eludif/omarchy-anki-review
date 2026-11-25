@@ -1,0 +1,23 @@
+{
+  "title": "Anki Review",
+  "bar": "Anki",
+  "deck": "Deck",
+  "start": "Review",
+  "reload": "Reload decks",
+  "choose": "Change deck",
+  "loading": "Working…",
+  "done": "No more cards to review in this session.",
+  "empty": "No decks available. Open an Anki profile and reload.",
+  "reveal": "Show answer",
+  "again": "Again",
+  "hard": "Hard",
+  "good": "Good",
+  "easy": "Easy",
+  "media": "Open this card in Anki to see its full content.",
+  "error.connection": "Start Anki Desktop with AnkiConnect enabled, then reload.",
+  "error.api": "AnkiConnect rejected the request. Check the add-on and Anki Desktop.",
+  "error.response": "AnkiConnect returned an unexpected response.",
+  "error.deck": "Anki could not start a review for this deck.",
+  "error.changed": "The active card changed in Anki. Start the deck again.",
+  "error.grade": "Check Anki Desktop to see whether the grade was saved before continuing."
+}

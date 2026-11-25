@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "anki.review",
+  "name": "Anki Review",
+  "version": "0.1.0",
+  "author": "Anki Review contributors",
+  "description": "Review any Anki deck from the Omarchy bar",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "ReviewWidget.qml" },
+  "barWidget": {
+    "displayName": "Anki Review",
+    "category": "Education",
+    "defaultSection": "right",
+    "allowMultiple": false
+  }
+}
