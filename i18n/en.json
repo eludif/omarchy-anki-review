@@ -1,10 +1,10 @@
 {
   "title": "Anki Review",
-  "bar": "Anki",
   "deck": "Deck",
   "start": "Review",
   "reload": "Reload decks",
   "choose": "Change deck",
+  "back": "Back",
   "loading": "Working…",
   "done": "No more cards to review in this session.",
   "empty": "No decks available. Open an Anki profile and reload.",

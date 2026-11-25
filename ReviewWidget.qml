@@ -18,6 +18,18 @@ Panel {
     property string action: ""
     property string message: ""
 
+    readonly property color foreground: bar ? bar.foreground : Color.foreground
+    readonly property color dim: Qt.darker(foreground, 1.55)
+    readonly property color cardFill: Qt.tint(Color.popups.background, Qt.rgba(
+        foreground.r, foreground.g, foreground.b, 0.07))
+
+    component ClockButton: Button {
+        foreground: root.foreground
+        fontSize: Style.font.bodySmall
+        bordered: true
+        focusable: true
+    }
+
     Translations {
         id: strings
         directory: Qt.resolvedUrl("i18n")
@@ -72,12 +84,13 @@ Panel {
         }
     }
 
-    WidgetButton {
+    BarIconButton {
         id: barButton
         anchors.fill: parent
         bar: root.bar
-        text: strings.t("bar")
-        labelVisible: true
+        slotSize: Style.bar.statusSlot
+        text: "󰂺"
+        tooltipText: strings.t("title")
         onPressed: function(button) {
             if (button === Qt.LeftButton)
                 root.toggle()
@@ -103,17 +116,24 @@ Panel {
         anchorItem: barButton
         open: root.opened
         focusTarget: popup.loadedContent
-        contentWidth: popup.fittedContentWidth(Style.space(390))
-        contentHeight: popup.fittedContentHeight(popup.loadedContentHeight, Style.space(480))
+        contentWidth: popup.fittedContentWidth(Style.space(340))
+        contentHeight: popup.fittedContentHeight(popup.loadedContentHeight, Style.space(540))
 
         content: Flickable {
             id: scroll
             anchors.fill: parent
             contentWidth: width
             contentHeight: implicitHeight
-            implicitHeight: body.implicitHeight + Style.space(28)
+            implicitHeight: body.implicitHeight
             activeFocusOnTab: true
+            boundsBehavior: Flickable.StopAtBounds
             clip: true
+            Keys.onEscapePressed: {
+                if (root.choosingDeck)
+                    root.choosingDeck = false
+                else
+                    root.close()
+            }
 
             Connections {
                 target: root
@@ -122,53 +142,59 @@ Panel {
 
             ColumnLayout {
                 id: body
-                x: Style.space(14)
-                y: Style.space(14)
-                width: scroll.width - Style.space(28)
-                spacing: Style.space(10)
+                width: scroll.width
+                spacing: Style.spacing.panelGap
 
                 PanelHero {
                     Layout.fillWidth: true
                     title: strings.t("title")
                     meta: root.selectedDeck
+                    foreground: root.foreground
                     iconComponent: Text {
                         text: "󰂺"
                         textFormat: Text.PlainText
-                        color: Color.accent
+                        color: root.foreground
                         font.family: Style.font.family
                         font.pixelSize: Style.font.display
                     }
                 }
 
-                PanelSeparator { Layout.fillWidth: true }
-
-                PanelSectionHeader {
+                ColumnLayout {
                     Layout.fillWidth: true
                     visible: root.choosingDeck && root.decks.length > 0
-                    text: strings.t("deck").toUpperCase()
-                }
+                    spacing: Style.spacing.md
 
-                ListView {
-                    id: deckList
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(count * rowHeight, Style.space(205))
-                    visible: root.choosingDeck && count > 0
-                    model: root.decks
-                    clip: true
-                    readonly property real rowHeight: Style.space(36)
+                    PanelSectionHeader {
+                        Layout.fillWidth: true
+                        foreground: root.foreground
+                        text: strings.t("deck").toUpperCase()
+                    }
 
-                    delegate: Button {
-                        required property string modelData
-                        width: deckList.width
-                        height: deckList.rowHeight
-                        leftAlign: true
-                        focusable: true
-                        enabled: root.action === ""
-                        selected: root.selectedDeck === modelData
-                        text: modelData
-                        onClicked: {
-                            root.selectedDeck = modelData
-                            root.choosingDeck = false
+                    ListView {
+                        id: deckList
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: Math.min(
+                            count * (rowHeight + spacing) - spacing, Style.space(205))
+                        model: root.decks
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+                        spacing: Style.spacing.md
+                        readonly property real rowHeight: Style.space(38)
+
+                        delegate: ClockButton {
+                            required property string modelData
+                            width: ListView.view.width
+                            height: deckList.rowHeight
+                            leftAlign: true
+                            bordered: false
+                            background: root.cardFill
+                            enabled: root.action === ""
+                            selected: root.selectedDeck === modelData
+                            text: modelData
+                            onClicked: {
+                                root.selectedDeck = modelData
+                                root.choosingDeck = false
+                            }
                         }
                     }
                 }
@@ -176,100 +202,125 @@ Panel {
                 Text {
                     Layout.fillWidth: true
                     visible: text !== ""
-                    text: root.action ? strings.t(root.action === "launch" ? "launching" : "loading") : root.message ? strings.t(root.message) : ""
+                    text: root.action ? strings.t(root.action === "launch" ? "launching" : "loading")
+                                      : root.message ? strings.t(root.message) : ""
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
-                    color: Color.foreground
+                    color: root.dim
                     font.family: Style.font.family
-                    font.pixelSize: Style.font.body
+                    font.pixelSize: Style.font.bodySmall
                 }
 
-                Text {
+                Rectangle {
+                    id: cardSurface
                     Layout.fillWidth: true
+                    implicitHeight: cardBody.implicitHeight + 2 * padding
                     visible: root.card !== null
-                    text: root.card ? (root.card.front || strings.t("media")) : ""
-                    textFormat: Text.PlainText
-                    wrapMode: Text.Wrap
-                    color: Color.foreground
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.body
+                    radius: Style.cornerRadius
+                    color: root.cardFill
+
+                    readonly property int padding: Style.space(15)
+
+                    ColumnLayout {
+                        id: cardBody
+                        x: cardSurface.padding
+                        y: cardSurface.padding
+                        width: cardSurface.width - 2 * cardSurface.padding
+                        spacing: Style.spacing.md
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.card ? (root.card.front || strings.t("media")) : ""
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            color: root.foreground
+                            font.family: Style.font.family
+                            font.pixelSize: Style.font.body
+                            font.bold: true
+                        }
+
+                        PanelSeparator {
+                            Layout.fillWidth: true
+                            visible: root.revealed
+                            foreground: root.foreground
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            visible: root.revealed
+                            text: root.card && root.revealed ? (root.card.back || strings.t("media")) : ""
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            color: root.foreground
+                            font.family: Style.font.family
+                            font.pixelSize: Style.font.body
+                        }
+                    }
                 }
 
-                PanelSeparator {
+                ClockButton {
+                    Layout.fillWidth: true
+                    visible: !root.card && !root.choosingDeck && root.selectedDeck !== ""
+                             && root.message !== "error.connection"
+                    enabled: root.action === ""
+                    text: strings.t("start")
+                    onClicked: root.run("start", [root.selectedDeck])
+                }
+
+                ClockButton {
+                    Layout.fillWidth: true
+                    visible: root.card !== null && !root.revealed
+                    enabled: root.action === ""
+                    text: strings.t("reveal")
+                    onClicked: root.run("reveal", [root.card.id])
+                }
+
+                RowLayout {
                     Layout.fillWidth: true
                     visible: root.revealed
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    visible: root.revealed
-                    text: root.card && root.revealed ? (root.card.back || strings.t("media")) : ""
-                    textFormat: Text.PlainText
-                    wrapMode: Text.Wrap
-                    color: Color.foreground
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.body
-                }
-
-                Flow {
-                    Layout.fillWidth: true
-                    spacing: Style.space(6)
-
-                    Button {
-                        focusable: true
-                        visible: !root.card
-                        enabled: root.action === "" && root.selectedDeck !== ""
-                        bordered: true
-                        text: strings.t("start")
-                        onClicked: root.run("start", [root.selectedDeck])
-                    }
-
-                    Button {
-                        focusable: true
-                        visible: !root.card && (root.message !== "" || !root.decks.length)
-                        enabled: root.action === ""
-                        text: strings.t("reload")
-                        onClicked: root.run("decks")
-                    }
-
-                    Button {
-                        focusable: true
-                        visible: root.card !== null && !root.revealed
-                        enabled: root.action === ""
-                        bordered: true
-                        text: strings.t("reveal")
-                        onClicked: root.run("reveal", [root.card.id])
-                    }
+                    spacing: Style.spacing.md
 
                     Repeater {
                         model: root.card && root.revealed ? root.card.ratings : []
-                        Button {
-                            focusable: true
-                            bordered: true
+                        ClockButton {
                             required property int index
                             required property string modelData
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 1
                             text: strings.t(modelData)
                             enabled: root.action === ""
                             onClicked: root.run("grade", [root.card.id, String(index + 1)])
                         }
                     }
+                }
 
-                    Button {
-                        focusable: true
-                        bordered: true
-                        visible: root.message === "error.connection"
-                        enabled: root.action === ""
-                        text: strings.t("launch")
-                        onClicked: root.run("launch")
-                    }
+                ClockButton {
+                    Layout.fillWidth: true
+                    visible: root.message === "error.connection"
+                    enabled: root.action === ""
+                    text: strings.t("launch")
+                    onClicked: root.run("launch")
+                }
 
-                    Button {
-                        focusable: true
-                        visible: !root.choosingDeck && (root.card !== null || root.decks.length > 1)
-                        enabled: root.action === ""
-                        text: strings.t("choose")
-                        onClicked: root.chooseDeck()
+                ClockButton {
+                    Layout.fillWidth: true
+                    visible: root.choosingDeck || root.card !== null || root.decks.length > 1
+                    enabled: root.action === ""
+                    text: strings.t(root.choosingDeck ? "back" : "choose")
+                    onClicked: {
+                        if (root.choosingDeck)
+                            root.choosingDeck = false
+                        else
+                            root.chooseDeck()
                     }
+                }
+
+                ClockButton {
+                    Layout.fillWidth: true
+                    visible: !root.card && (root.message !== "" || !root.decks.length)
+                             && root.action === ""
+                    text: strings.t("reload")
+                    onClicked: root.run("decks")
                 }
             }
         }
