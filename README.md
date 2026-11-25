@@ -30,6 +30,31 @@ omarchy-shell shell rescanPlugins
 omarchy plugin enable anki.review
 ```
 
+## Background startup
+
+When AnkiConnect is unreachable, **Start in background** launches Anki in the
+hidden Hyprland workspace `special:anki-review` and waits for the deck list.
+An already connected Anki session is reused. If Anki is open without a working
+AnkiConnect instance, check the add-on in the existing window.
+
+Open or hide that workspace with:
+
+```sh
+hyprctl dispatch 'hl.dsp.workspace.toggle_special("anki-review")'
+```
+
+For optional startup at login, add this to your Omarchy
+`~/.config/hypr/autostart.lua`:
+
+```lua
+hl.on("hyprland.start", function()
+  hl.exec_cmd("anki", { workspace = "special:anki-review silent" })
+end)
+```
+
+If Anki is installed in your home directory and is missing from Hyprland's
+PATH, replace `"anki"` with the full path to its launcher.
+
 ## Review and sync
 
 Open **Anki** in the bar, pick a deck, and click **Review**. Use **Show answer**

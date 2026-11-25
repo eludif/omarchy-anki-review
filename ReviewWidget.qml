@@ -1,8 +1,7 @@
 import QtQuick
-import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Quickshell.Io
-import qs.Commons as Commons
+import qs.Commons
 import qs.Ui
 
 Panel {
@@ -15,10 +14,11 @@ Panel {
     property string selectedDeck: ""
     property var card: null
     property bool revealed: false
+    property bool choosingDeck: false
     property string action: ""
     property string message: ""
 
-    Commons.Translations {
+    Translations {
         id: strings
         directory: Qt.resolvedUrl("i18n")
     }
@@ -44,7 +44,7 @@ Panel {
             return
         }
 
-        if (operation === "decks") {
+        if (operation === "decks" || operation === "launch") {
             decks = result.decks
             if (!decks.includes(selectedDeck))
                 selectedDeck = decks[0] || ""
@@ -84,6 +84,13 @@ Panel {
         }
     }
 
+    function chooseDeck() {
+        card = null
+        revealed = false
+        message = ""
+        choosingDeck = true
+    }
+
     onOpenedChanged: {
         if (opened && card === null && action === "" && message !== "error.grade")
             run("decks")
@@ -95,15 +102,17 @@ Panel {
         bar: root.bar
         anchorItem: barButton
         open: root.opened
-        contentWidth: popup.fittedContentWidth(Commons.Style.space(390))
-        contentHeight: popup.fittedContentHeight(popup.loadedContentHeight, Commons.Style.space(480))
+        focusTarget: popup.loadedContent
+        contentWidth: popup.fittedContentWidth(Style.space(390))
+        contentHeight: popup.fittedContentHeight(popup.loadedContentHeight, Style.space(480))
 
         content: Flickable {
             id: scroll
             anchors.fill: parent
             contentWidth: width
             contentHeight: implicitHeight
-            implicitHeight: body.implicitHeight + 28
+            implicitHeight: body.implicitHeight + Style.space(28)
+            activeFocusOnTab: true
             clip: true
 
             Connections {
@@ -113,59 +122,66 @@ Panel {
 
             ColumnLayout {
                 id: body
-                x: 14
-                y: 14
-                width: scroll.width - 28
-                spacing: 10
+                x: Style.space(14)
+                y: Style.space(14)
+                width: scroll.width - Style.space(28)
+                spacing: Style.space(10)
 
-                Text {
+                PanelHero {
                     Layout.fillWidth: true
-                    text: strings.t("title")
-                    color: Commons.Color.foreground
-                    font.bold: true
-                    textFormat: Text.PlainText
+                    title: strings.t("title")
+                    meta: root.selectedDeck
+                    iconComponent: Text {
+                        text: "󰂺"
+                        textFormat: Text.PlainText
+                        color: Color.accent
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.display
+                    }
                 }
 
-                Controls.ComboBox {
-                    id: deckPicker
+                PanelSeparator { Layout.fillWidth: true }
+
+                PanelSectionHeader {
                     Layout.fillWidth: true
-                    visible: !root.card && root.decks.length > 0
-                    enabled: root.action === ""
+                    visible: root.choosingDeck && root.decks.length > 0
+                    text: strings.t("deck").toUpperCase()
+                }
+
+                ListView {
+                    id: deckList
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.min(count * rowHeight, Style.space(205))
+                    visible: root.choosingDeck && count > 0
                     model: root.decks
-                    currentIndex: root.decks.indexOf(root.selectedDeck)
-                    Accessible.name: strings.t("deck")
-                    contentItem: Text {
-                        text: deckPicker.displayText
-                        textFormat: Text.PlainText
-                        color: Commons.Color.foreground
-                        leftPadding: 8
-                        rightPadding: 28
-                        verticalAlignment: Text.AlignVCenter
-                        elide: Text.ElideRight
-                    }
-                    delegate: Controls.ItemDelegate {
-                        id: deckOption
-                        required property int index
+                    clip: true
+                    readonly property real rowHeight: Style.space(36)
+
+                    delegate: Button {
                         required property string modelData
-                        width: deckPicker.width
-                        highlighted: deckPicker.highlightedIndex === index
-                        contentItem: Text {
-                            text: deckOption.modelData
-                            textFormat: Text.PlainText
-                            color: Commons.Color.foreground
-                            elide: Text.ElideRight
+                        width: deckList.width
+                        height: deckList.rowHeight
+                        leftAlign: true
+                        focusable: true
+                        enabled: root.action === ""
+                        selected: root.selectedDeck === modelData
+                        text: modelData
+                        onClicked: {
+                            root.selectedDeck = modelData
+                            root.choosingDeck = false
                         }
                     }
-                    onActivated: function(index) { root.selectedDeck = root.decks[index] }
                 }
 
                 Text {
                     Layout.fillWidth: true
                     visible: text !== ""
-                    text: root.action ? strings.t("loading") : root.message ? strings.t(root.message) : ""
+                    text: root.action ? strings.t(root.action === "launch" ? "launching" : "loading") : root.message ? strings.t(root.message) : ""
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
-                    color: Commons.Color.foreground
+                    color: Color.foreground
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
                 }
 
                 Text {
@@ -174,7 +190,14 @@ Panel {
                     text: root.card ? (root.card.front || strings.t("media")) : ""
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
-                    color: Commons.Color.foreground
+                    color: Color.foreground
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                }
+
+                PanelSeparator {
+                    Layout.fillWidth: true
+                    visible: root.revealed
                 }
 
                 Text {
@@ -183,37 +206,46 @@ Panel {
                     text: root.card && root.revealed ? (root.card.back || strings.t("media")) : ""
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
-                    color: Commons.Color.foreground
+                    color: Color.foreground
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
                 }
 
                 Flow {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Style.space(6)
 
-                    Controls.Button {
+                    Button {
+                        focusable: true
                         visible: !root.card
                         enabled: root.action === "" && root.selectedDeck !== ""
+                        bordered: true
                         text: strings.t("start")
                         onClicked: root.run("start", [root.selectedDeck])
                     }
 
-                    Controls.Button {
-                        visible: !root.card
+                    Button {
+                        focusable: true
+                        visible: !root.card && (root.message !== "" || !root.decks.length)
                         enabled: root.action === ""
                         text: strings.t("reload")
                         onClicked: root.run("decks")
                     }
 
-                    Controls.Button {
+                    Button {
+                        focusable: true
                         visible: root.card !== null && !root.revealed
                         enabled: root.action === ""
+                        bordered: true
                         text: strings.t("reveal")
                         onClicked: root.run("reveal", [root.card.id])
                     }
 
                     Repeater {
                         model: root.card && root.revealed ? root.card.ratings : []
-                        Controls.Button {
+                        Button {
+                            focusable: true
+                            bordered: true
                             required property int index
                             required property string modelData
                             text: strings.t(modelData)
@@ -222,15 +254,21 @@ Panel {
                         }
                     }
 
-                    Controls.Button {
-                        visible: root.card !== null
+                    Button {
+                        focusable: true
+                        bordered: true
+                        visible: root.message === "error.connection"
+                        enabled: root.action === ""
+                        text: strings.t("launch")
+                        onClicked: root.run("launch")
+                    }
+
+                    Button {
+                        focusable: true
+                        visible: !root.choosingDeck && (root.card !== null || root.decks.length > 1)
                         enabled: root.action === ""
                         text: strings.t("choose")
-                        onClicked: {
-                            root.card = null
-                            root.revealed = false
-                            root.message = ""
-                        }
+                        onClicked: root.chooseDeck()
                     }
                 }
             }

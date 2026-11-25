@@ -1,10 +1,14 @@
 """Translate a widget action into requests to the local Anki reviewer."""
 
+import fcntl
 import http.client
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
+import time
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -97,6 +101,9 @@ def current_card():
 
 
 def review(operation, args):
+    if operation == "launch":
+        return launch_anki()
+
     if operation == "decks":
         decks = request("deckNames")
         if not isinstance(decks, list) or not all(isinstance(name, str) for name in decks):
@@ -126,6 +133,60 @@ def review(operation, args):
         return {"card": current_card()}
 
     raise ReviewError("response")
+
+
+# The compositor starts the app with a per-launch workspace rule.
+# The command is fixed so deck names and card data never reach the shell.
+ANKI_COMMAND = 'if command -v anki >/dev/null 2>&1; then exec anki; else exec "$HOME/.local/bin/anki"; fi'
+BACKGROUND_LAUNCH = 'hl.exec_cmd([[' + ANKI_COMMAND + ']], { workspace = "special:anki-review silent" })'
+
+
+def launch_anki():
+    runtime_dir = Path(os.environ["XDG_RUNTIME_DIR"])
+    with (runtime_dir / "omarchy-anki-review.lock").open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ReviewError("launch_pending") from None
+
+        try:
+            return review("decks", [])
+        except ConnectionRefusedError:
+            pass
+
+        if connection_error() == "addon_missing":
+            raise ReviewError("addon_missing")
+
+        local_anki = Path.home() / ".local/bin/anki"
+        if not shutil.which("anki") and not os.access(local_anki, os.X_OK):
+            raise ReviewError("anki_missing")
+
+        try:
+            result = subprocess.run(
+                ["hyprctl", "-j", "clients"], capture_output=True, text=True,
+                check=True, timeout=3,
+            )
+            clients = json.loads(result.stdout)
+            if any(str(client.get(key, "")).lower() in {"anki", "net.ankiweb.anki"}
+                   for client in clients for key in ("class", "initialClass")):
+                raise ReviewError("anki_running")
+
+            result = subprocess.run(
+                ["hyprctl", "eval", BACKGROUND_LAUNCH], capture_output=True,
+                text=True, check=True, timeout=3,
+            )
+            if result.stdout.strip() != "ok":
+                raise ReviewError("launch_failed")
+        except (OSError, subprocess.SubprocessError, ValueError):
+            raise ReviewError("launch_failed") from None
+
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            try:
+                return review("decks", [])
+            except ConnectionRefusedError:
+                time.sleep(0.5)
+        raise ReviewError("launch_timeout")
 
 
 def connection_error():

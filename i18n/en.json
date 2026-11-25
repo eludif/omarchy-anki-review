@@ -20,5 +20,12 @@
   "error.response": "AnkiConnect returned an unexpected response.",
   "error.deck": "Anki could not start a review for this deck.",
   "error.changed": "The active card changed in Anki. Start the deck again.",
-  "error.grade": "Check Anki Desktop to see whether the grade was saved before continuing."
+  "error.grade": "Check Anki Desktop to see whether the grade was saved before continuing.",
+  "launch": "Start in background",
+  "launching": "Starting Anki…",
+  "error.anki_missing": "Anki Desktop could not be found. Install Anki and reload.",
+  "error.anki_running": "Anki is already running. Check that AnkiConnect is enabled, then reload.",
+  "error.launch_pending": "Anki is already starting. Wait a moment and reload.",
+  "error.launch_failed": "Hyprland could not launch Anki. Open Anki from the app launcher.",
+  "error.launch_timeout": "AnkiConnect did not respond after launch. Open the Anki workspace to check for a prompt."
 }
